@@ -91,6 +91,12 @@ func (self *FileSystemUsage) Get(path string) error {
 	}
 
 	self.Total = *(*uint64)(unsafe.Pointer(&totalBytes))
+	self.Free = *(*uint64)(unsafe.Pointer(&totalFreeBytes))
+	self.Avail = *(*uint64)(unsafe.Pointer(&availableBytes))
+	self.Used = self.Total - self.Free
+	self.Files = 0
+	self.FreeFiles = 0
+
 	return nil
 }
 
