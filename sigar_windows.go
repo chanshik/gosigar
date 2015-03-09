@@ -7,6 +7,7 @@ package sigar
 import "C"
 
 import (
+	"bytes"
 	"fmt"
 	"unsafe"
 )
@@ -49,7 +50,42 @@ func (self *CpuList) Get() error {
 }
 
 func (self *FileSystemList) Get() error {
-	return notImplemented()
+	capacity := len(self.List)
+	if capacity == 0 {
+		capacity = 10
+	}
+	fslist := make([]FileSystem, 0, capacity)
+
+	buffer := C.CString("")
+	defer C.free(unsafe.Pointer(buffer))
+
+	buffer_length := C.GetLogicalDriveStrings(1024, (*C.CHAR)(buffer))
+	if buffer_length == 0 {
+		return fmt.Errorf("GetLogicalDriveStrings failed: %d", C.GetLastError())
+	} else if buffer_length > 1024 {
+		buffer_length = C.GetLogicalDriveStrings(buffer_length+1, (*C.CHAR)(buffer))
+	}
+
+	drives := C.GoBytes(unsafe.Pointer(buffer), (C.int)(buffer_length))
+	drivename := new(bytes.Buffer)
+
+	for _, ch := range drives {
+		if ch != 0 {
+			drivename.WriteByte(ch)
+		} else {
+			fs := FileSystem{}
+			fs.DevName = drivename.String()
+			fs.DirName = fs.DevName
+
+			fslist = append(fslist, fs)
+
+			drivename = new(bytes.Buffer)
+		}
+	}
+
+	self.List = fslist
+
+	return nil
 }
 
 func (self *ProcList) Get() error {
