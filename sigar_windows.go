@@ -34,6 +34,8 @@ func (self *Mem) Get() error {
 	}
 
 	self.Total = uint64(statex.ullTotalPhys)
+	self.Free = uint64(statex.ullAvailPhys)
+	self.Used = self.Total - self.Free
 	return nil
 }
 
@@ -120,7 +122,11 @@ func (self *FileSystemUsage) Get(path string) error {
 	pathChars := C.CString(path)
 	defer C.free(unsafe.Pointer(pathChars))
 
-	succeeded := C.GetDiskFreeSpaceEx((*C.CHAR)(pathChars), &availableBytes, &totalBytes, &totalFreeBytes)
+	succeeded := C.GetDiskFreeSpaceEx(
+		(*C.CHAR)(pathChars),
+		(&availableBytes),
+		(&totalBytes),
+		(&totalFreeBytes))
 	if succeeded == C.FALSE {
 		lastError := C.GetLastError()
 		return fmt.Errorf("GetDiskFreeSpaceEx failed with error: %d", int(lastError))
